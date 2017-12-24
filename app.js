@@ -1,65 +1,20 @@
 var express = require('express');
 
-var verbose = process.env.NODE_ENV != 'test';
+var cookieSession = require('cookie-session');
 
 var app = module.exports = express();
 
-app.map = function (a, route) {
-  route = route || '';
-  for (var key in a) {
-    switch (typeof a[key]) {
-      // { '/path': { ... }}
-      case 'object':
-        app.map(a[key], route + key);
-        break;
-        // get: function(){ ... }
-      case 'function':
-        if (verbose) console.log('%s %s', key, route);
-        app[key](route, a[key]);
-        break;
-    }
-  }
-};
+// add req.session cookie support
+app.use(cookieSession({ secret: 'manny is cool' }));
 
-var users = {
-  list: function (req, res) {
-    res.send('user list');
-  },
+// do something with the session
+app.use(count);
 
-  get: function (req, res) {
-    res.send('user ' + req.params.uid);
-  },
-
-  delete: function (req, res) {
-    res.send('delete users');
-  }
-};
-
-var pets = {
-  list: function (req, res) {
-    res.send('user ' + req.params.uid + '\'s pets');
-  },
-
-  delete: function (req, res) {
-    res.send('delete ' + req.params.uid + '\'s pet ' + req.params.pid);
-  }
-};
-
-app.map({
-  '/users': {
-    get: users.list,
-    delete: users.delete,
-    '/:uid': {
-      get: users.get,
-      '/pets': {
-        get: pets.list,
-        '/:pid': {
-          delete: pets.delete
-        }
-      }
-    }
-  }
-});
+// custom middleware
+function count(req, res) {
+  req.session.count = (req.session.count || 0) + 1
+  res.send('viewed ' + req.session.count + ' times\n')
+}
 
 /* istanbul ignore next */
 if (!module.parent) {
