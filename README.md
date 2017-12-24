@@ -26,3 +26,7 @@ multipart|文件上传|2017-12-24
 mvc|mvc模式|2017-12-24
 auth|权限验证|2017-12-24
 content-negotiation|content-negotiation|2017-12-24
+vhost|虚拟域名|2017-12-24
+view-constructor|视图构造器|2017-12-24
+view-locals|本地视图|2017-12-24
+web-service|web服务|2017-12-24
