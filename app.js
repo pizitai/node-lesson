@@ -1,85 +1,28 @@
 var express = require('express');
 
+var path = require('path');
 var app = module.exports = express();
 
-// Ad-hoc example resource method
-
-app.resource = function(path, obj) {
-  this.get(path, obj.index);
-  this.get(path + '/:a..:b.:format?', function(req, res){
-    var a = parseInt(req.params.a, 10);
-    var b = parseInt(req.params.b, 10);
-    var format = req.params.format;
-    obj.range(req, res, a, b, format);
-  });
-  this.get(path + '/:id', obj.show);
-  this.delete(path + '/:id', function(req, res){
-    var id = parseInt(req.params.id, 10);
-    obj.destroy(req, res, id);
-  });
-};
-
-// Fake records
-
-var users = [
-    { name: 'tj' }
-  , { name: 'ciaran' }
-  , { name: 'aaron' }
-  , { name: 'guillermo' }
-  , { name: 'simon' }
-  , { name: 'tobi' }
-];
-
-// Fake controller.
-
-var User = {
-  index: function(req, res){
-    res.send(users);
-  },
-  show: function(req, res){
-    res.send(users[req.params.id] || { error: 'Cannot find user' });
-  },
-  destroy: function(req, res, id){
-    var destroyed = id in users;
-    delete users[id];
-    res.send(destroyed ? 'destroyed' : 'Cannot find user');
-  },
-  range: function(req, res, a, b, format){
-    var range = users.slice(a, b + 1);
-    switch (format) {
-      case 'json':
-        res.send(range);
-        break;
-      case 'html':
-      default:
-        var html = '<ul>' + range.map(function(user){
-          return '<li>' + user.name + '</li>';
-        }).join('\n') + '</ul>';
-        res.send(html);
-        break;
-    }
-  }
-};
-
-// curl http://localhost:3000/users     -- responds with all users
-// curl http://localhost:3000/users/1   -- responds with user 1
-// curl http://localhost:3000/users/4   -- responds with error
-// curl http://localhost:3000/users/1..3 -- responds with several users
-// curl -X DELETE http://localhost:3000/users/1  -- deletes the user
-
-app.resource('/users', User);
-
 app.get('/', function(req, res){
-  res.send([
-    '<h1>Examples:</h1> <ul>'
-    , '<li>GET /users</li>'
-    , '<li>GET /users/1</li>'
-    , '<li>GET /users/3</li>'
-    , '<li>GET /users/1..3</li>'
-    , '<li>GET /users/1..3.json</li>'
-    , '<li>DELETE /users/4</li>'
-    , '</ul>'
-  ].join('\n'));
+  res.send('<ul>'
+    + '<li>Download <a href="/files/amazing.txt">amazing.txt</a>.</li>'
+    + '<li>Download <a href="/files/missing.txt">missing.txt</a>.</li>'
+    + '<li>Download <a href="/files/CCTV大赛上海分赛区.txt">CCTV大赛上海分赛区.txt</a>.</li>'
+    + '</ul>');
+});
+
+// /files/* is accessed via req.params[0]
+// but here we name it :file
+app.get('/files/:file(*)', function(req, res, next){
+  var filePath = path.join(__dirname, 'files', req.params.file);
+
+  res.download(filePath, function (err) {
+    if (!err) return; // file sent
+    if (err && err.status !== 404) return next(err); // non-404 error
+    // file for download not found
+    res.statusCode = 404;
+    res.send('Cant find that file, sorry!');
+  });
 });
 
 /* istanbul ignore next */
