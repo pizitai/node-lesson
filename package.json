@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "express": "^4.16.2"
+    "express": "^4.16.2",
+    "morgan": "^1.9.0",
+    "vhost": "^3.0.2"
   }
 }
