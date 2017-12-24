@@ -1,64 +1,35 @@
 var express = require('express');
 
-var verbose = process.env.NODE_ENV != 'test';
+var escapeHtml = require('escape-html');
+var fs = require('fs');
+var marked = require('marked');
+var path = require('path');
 
 var app = module.exports = express();
 
-app.map = function (a, route) {
-  route = route || '';
-  for (var key in a) {
-    switch (typeof a[key]) {
-      // { '/path': { ... }}
-      case 'object':
-        app.map(a[key], route + key);
-        break;
-        // get: function(){ ... }
-      case 'function':
-        if (verbose) console.log('%s %s', key, route);
-        app[key](route, a[key]);
-        break;
-    }
-  }
-};
+// register .md as an engine in express view system
 
-var users = {
-  list: function (req, res) {
-    res.send('user list');
-  },
+app.engine('md', function(path, options, fn){
+  fs.readFile(path, 'utf8', function(err, str){
+    if (err) return fn(err);
+    var html = marked.parse(str).replace(/\{([^}]+)\}/g, function(_, name){
+      return escapeHtml(options[name] || '');
+    });
+    fn(null, html);
+  });
+});
 
-  get: function (req, res) {
-    res.send('user ' + req.params.uid);
-  },
+app.set('views', path.join(__dirname, 'views'));
 
-  delete: function (req, res) {
-    res.send('delete users');
-  }
-};
+// make it the default so we dont need .md
+app.set('view engine', 'md');
 
-var pets = {
-  list: function (req, res) {
-    res.send('user ' + req.params.uid + '\'s pets');
-  },
+app.get('/', function(req, res){
+  res.render('index', { title: 'Markdown Example' });
+});
 
-  delete: function (req, res) {
-    res.send('delete ' + req.params.uid + '\'s pet ' + req.params.pid);
-  }
-};
-
-app.map({
-  '/users': {
-    get: users.list,
-    delete: users.delete,
-    '/:uid': {
-      get: users.get,
-      '/pets': {
-        get: pets.list,
-        '/:pid': {
-          delete: pets.delete
-        }
-      }
-    }
-  }
+app.get('/fail', function(req, res){
+  res.render('missing', { title: 'Markdown Example' });
 });
 
 /* istanbul ignore next */
