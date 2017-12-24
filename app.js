@@ -1,64 +1,45 @@
 var express = require('express');
 
-var verbose = process.env.NODE_ENV != 'test';
+var path = require('path');
+var redis = require('redis');
 
-var app = module.exports = express();
+var db = redis.createClient();
 
-app.map = function (a, route) {
-  route = route || '';
-  for (var key in a) {
-    switch (typeof a[key]) {
-      // { '/path': { ... }}
-      case 'object':
-        app.map(a[key], route + key);
-        break;
-        // get: function(){ ... }
-      case 'function':
-        if (verbose) console.log('%s %s', key, route);
-        app[key](route, a[key]);
-        break;
-    }
-  }
-};
+// npm install redis
 
-var users = {
-  list: function (req, res) {
-    res.send('user list');
-  },
+var app = express();
 
-  get: function (req, res) {
-    res.send('user ' + req.params.uid);
-  },
+app.use(express.static(path.join(__dirname, 'public')));
 
-  delete: function (req, res) {
-    res.send('delete users');
-  }
-};
+// populate search
 
-var pets = {
-  list: function (req, res) {
-    res.send('user ' + req.params.uid + '\'s pets');
-  },
+db.sadd('ferret', 'tobi');
+db.sadd('ferret', 'loki');
+db.sadd('ferret', 'jane');
+db.sadd('cat', 'manny');
+db.sadd('cat', 'luna');
 
-  delete: function (req, res) {
-    res.send('delete ' + req.params.uid + '\'s pet ' + req.params.pid);
-  }
-};
+/**
+ * GET search for :query.
+ */
 
-app.map({
-  '/users': {
-    get: users.list,
-    delete: users.delete,
-    '/:uid': {
-      get: users.get,
-      '/pets': {
-        get: pets.list,
-        '/:pid': {
-          delete: pets.delete
-        }
-      }
-    }
-  }
+app.get('/search/:query?', function(req, res){
+  var query = req.params.query;
+  db.smembers(query, function(err, vals){
+    if (err) return res.send(500);
+    res.send(vals);
+  });
+});
+
+/**
+ * GET client javascript. Here we use sendFile()
+ * because serving __dirname with the static() middleware
+ * would also mean serving our server "index.js" and the "search.jade"
+ * template.
+ */
+
+app.get('/client.js', function(req, res){
+  res.sendFile(path.join(__dirname, 'client.js'));
 });
 
 /* istanbul ignore next */
