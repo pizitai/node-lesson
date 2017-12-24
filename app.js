@@ -1,64 +1,86 @@
 var express = require('express');
 
-var verbose = process.env.NODE_ENV != 'test';
+var logger = require('morgan');
+var path = require('path');
+var session = require('express-session');
+var methodOverride = require('method-override');
 
 var app = module.exports = express();
 
-app.map = function (a, route) {
-  route = route || '';
-  for (var key in a) {
-    switch (typeof a[key]) {
-      // { '/path': { ... }}
-      case 'object':
-        app.map(a[key], route + key);
-        break;
-        // get: function(){ ... }
-      case 'function':
-        if (verbose) console.log('%s %s', key, route);
-        app[key](route, a[key]);
-        break;
-    }
-  }
+// set our default template engine to "ejs"
+// which prevents the need for using file extensions
+app.set('view engine', 'ejs');
+
+// set views for error and 404 pages
+app.set('views', path.join(__dirname, 'views'));
+
+// define a custom res.message() method
+// which stores messages in the session
+app.response.message = function(msg){
+  // reference `req.session` via the `this.req` reference
+  var sess = this.req.session;
+  // simply add the msg to an array for later
+  sess.messages = sess.messages || [];
+  sess.messages.push(msg);
+  return this;
 };
 
-var users = {
-  list: function (req, res) {
-    res.send('user list');
-  },
+// log
+if (!module.parent) app.use(logger('dev'));
 
-  get: function (req, res) {
-    res.send('user ' + req.params.uid);
-  },
+// serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
-  delete: function (req, res) {
-    res.send('delete users');
-  }
-};
+// session support
+app.use(session({
+  resave: false, // don't save session if unmodified
+  saveUninitialized: false, // don't create session until something stored
+  secret: 'some secret here'
+}));
 
-var pets = {
-  list: function (req, res) {
-    res.send('user ' + req.params.uid + '\'s pets');
-  },
+// parse request bodies (req.body)
+app.use(express.urlencoded({ extended: true }))
 
-  delete: function (req, res) {
-    res.send('delete ' + req.params.uid + '\'s pet ' + req.params.pid);
-  }
-};
+// allow overriding methods in query (?_method=put)
+app.use(methodOverride('_method'));
 
-app.map({
-  '/users': {
-    get: users.list,
-    delete: users.delete,
-    '/:uid': {
-      get: users.get,
-      '/pets': {
-        get: pets.list,
-        '/:pid': {
-          delete: pets.delete
-        }
-      }
-    }
-  }
+// expose the "messages" local variable when views are rendered
+app.use(function(req, res, next){
+  var msgs = req.session.messages || [];
+
+  // expose "messages" local variable
+  res.locals.messages = msgs;
+
+  // expose "hasMessages"
+  res.locals.hasMessages = !! msgs.length;
+
+  /* This is equivalent:
+   res.locals({
+     messages: msgs,
+     hasMessages: !! msgs.length
+   });
+  */
+
+  next();
+  // empty or "flush" the messages so they
+  // don't build up
+  req.session.messages = [];
+});
+
+// load controllers
+require('./lib/boot')(app, { verbose: !module.parent });
+
+app.use(function(err, req, res, next){
+  // log it
+  if (!module.parent) console.error(err.stack);
+
+  // error page
+  res.status(500).render('5xx');
+});
+
+// assume 404 since no middleware responded
+app.use(function(req, res, next){
+  res.status(404).render('404', { url: req.originalUrl });
 });
 
 /* istanbul ignore next */
