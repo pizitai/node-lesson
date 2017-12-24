@@ -18,3 +18,5 @@ search|查询|2017-12-24
 cookies|查询|2017-12-24
 session|查询|2017-12-24
 cookie-sessions|查询|2017-12-24
+downloads|下载|2017-12-24
+static-files|静态文件|2017-12-24
