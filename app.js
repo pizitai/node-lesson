@@ -2,70 +2,84 @@ var express = require('express');
 
 var app = module.exports = express();
 
-// Faux database
+// Ad-hoc example resource method
+
+app.resource = function(path, obj) {
+  this.get(path, obj.index);
+  this.get(path + '/:a..:b.:format?', function(req, res){
+    var a = parseInt(req.params.a, 10);
+    var b = parseInt(req.params.b, 10);
+    var format = req.params.format;
+    obj.range(req, res, a, b, format);
+  });
+  this.get(path + '/:id', obj.show);
+  this.delete(path + '/:id', function(req, res){
+    var id = parseInt(req.params.id, 10);
+    obj.destroy(req, res, id);
+  });
+};
+
+// Fake records
 
 var users = [
     { name: 'tj' }
+  , { name: 'ciaran' }
+  , { name: 'aaron' }
+  , { name: 'guillermo' }
+  , { name: 'simon' }
   , { name: 'tobi' }
-  , { name: 'loki' }
-  , { name: 'jane' }
-  , { name: 'bandit' }
 ];
 
-// Create HTTP error
+// Fake controller.
 
-function createError(status, message) {
-  var err = new Error(message);
-  err.status = status;
-  return err;
-}
-
-// Convert :to and :from to integers
-
-app.param(['to', 'from'], function(req, res, next, num, name){
-  req.params[name] = parseInt(num, 10);
-  if( isNaN(req.params[name]) ){
-    next(createError(400, 'failed to parseInt '+num));
-  } else {
-    next();
+var User = {
+  index: function(req, res){
+    res.send(users);
+  },
+  show: function(req, res){
+    res.send(users[req.params.id] || { error: 'Cannot find user' });
+  },
+  destroy: function(req, res, id){
+    var destroyed = id in users;
+    delete users[id];
+    res.send(destroyed ? 'destroyed' : 'Cannot find user');
+  },
+  range: function(req, res, a, b, format){
+    var range = users.slice(a, b + 1);
+    switch (format) {
+      case 'json':
+        res.send(range);
+        break;
+      case 'html':
+      default:
+        var html = '<ul>' + range.map(function(user){
+          return '<li>' + user.name + '</li>';
+        }).join('\n') + '</ul>';
+        res.send(html);
+        break;
+    }
   }
-});
+};
 
-// Load user by id
+// curl http://localhost:3000/users     -- responds with all users
+// curl http://localhost:3000/users/1   -- responds with user 1
+// curl http://localhost:3000/users/4   -- responds with error
+// curl http://localhost:3000/users/1..3 -- responds with several users
+// curl -X DELETE http://localhost:3000/users/1  -- deletes the user
 
-app.param('user', function(req, res, next, id){
-  if (req.user = users[id]) {
-    next();
-  } else {
-    next(createError(404, 'failed to find user'));
-  }
-});
-
-/**
- * GET index.
- */
+app.resource('/users', User);
 
 app.get('/', function(req, res){
-  res.send('Visit /user/0 or /users/0-2');
-});
-
-/**
- * GET :user.
- */
-
-app.get('/user/:user', function(req, res, next){
-  res.send('user ' + req.user.name);
-});
-
-/**
- * GET users :from - :to.
- */
-
-app.get('/users/:from-:to', function(req, res, next){
-  var from = req.params.from;
-  var to = req.params.to;
-  var names = users.map(function(user){ return user.name; });
-  res.send('users ' + names.slice(from, to + 1).join(', '));
+  res.send([
+    '<h1>Examples:</h1> <ul>'
+    , '<li>GET /users</li>'
+    , '<li>GET /users/1</li>'
+    , '<li>GET /users/3</li>'
+    , '<li>GET /users/1..3</li>'
+    , '<li>GET /users/1..3.json</li>'
+    , '<li>DELETE /users/4</li>'
+    , '</ul>'
+  ].join('\n'));
 });
 
 /* istanbul ignore next */
