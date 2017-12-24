@@ -1,64 +1,40 @@
 var express = require('express');
 
-var verbose = process.env.NODE_ENV != 'test';
-
 var app = module.exports = express();
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
 
-app.map = function (a, route) {
-  route = route || '';
-  for (var key in a) {
-    switch (typeof a[key]) {
-      // { '/path': { ... }}
-      case 'object':
-        app.map(a[key], route + key);
-        break;
-        // get: function(){ ... }
-      case 'function':
-        if (verbose) console.log('%s %s', key, route);
-        app[key](route, a[key]);
-        break;
-    }
+// custom log format
+if ('test' != process.env.NODE_ENV) app.use(logger(':method :url'));
+
+// parses request cookies, populating
+// req.cookies and req.signedCookies
+// when the secret is passed, used
+// for signing the cookies.
+app.use(cookieParser('my secret here'));
+
+// parses x-www-form-urlencoded
+app.use(express.urlencoded({ extended: false }))
+
+app.get('/', function(req, res){
+  if (req.cookies.remember) {
+    res.send('Remembered :). Click to <a href="/forget">forget</a>!.');
+  } else {
+    res.send('<form method="post"><p>Check to <label>'
+      + '<input type="checkbox" name="remember"/> remember me</label> '
+      + '<input type="submit" value="Submit"/>.</p></form>');
   }
-};
+});
 
-var users = {
-  list: function (req, res) {
-    res.send('user list');
-  },
+app.get('/forget', function(req, res){
+  res.clearCookie('remember');
+  res.redirect('back');
+});
 
-  get: function (req, res) {
-    res.send('user ' + req.params.uid);
-  },
-
-  delete: function (req, res) {
-    res.send('delete users');
-  }
-};
-
-var pets = {
-  list: function (req, res) {
-    res.send('user ' + req.params.uid + '\'s pets');
-  },
-
-  delete: function (req, res) {
-    res.send('delete ' + req.params.uid + '\'s pet ' + req.params.pid);
-  }
-};
-
-app.map({
-  '/users': {
-    get: users.list,
-    delete: users.delete,
-    '/:uid': {
-      get: users.get,
-      '/pets': {
-        get: pets.list,
-        '/:pid': {
-          delete: pets.delete
-        }
-      }
-    }
-  }
+app.post('/', function(req, res){
+  var minute = 60000;
+  if (req.body.remember) res.cookie('remember', 1, { maxAge: minute });
+  res.redirect('back');
 });
 
 /* istanbul ignore next */
