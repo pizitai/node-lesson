@@ -1,5 +1,8 @@
 {
   "dependencies": {
-    "express": "^4.16.2"
+    "connect-redis": "^3.3.2",
+    "express": "^4.16.2",
+    "express-session": "^1.15.6",
+    "morgan": "^1.9.0"
   }
 }
