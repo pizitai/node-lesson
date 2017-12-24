@@ -1,68 +1,57 @@
 var express = require('express');
 
-var verbose = process.env.NODE_ENV != 'test';
+var multiparty = require('multiparty');
+var format = require('util').format;
 
 var app = module.exports = express();
 
-app.map = function (a, route) {
-  route = route || '';
-  for (var key in a) {
-    switch (typeof a[key]) {
-      // { '/path': { ... }}
-      case 'object':
-        app.map(a[key], route + key);
-        break;
-        // get: function(){ ... }
-      case 'function':
-        if (verbose) console.log('%s %s', key, route);
-        app[key](route, a[key]);
-        break;
-    }
-  }
-};
+app.get('/', function(req, res){
+  res.send('<form method="post" enctype="multipart/form-data">'
+    + '<p>Title: <input type="text" name="title" /></p>'
+    + '<p>Image: <input type="file" name="image" /></p>'
+    + '<p><input type="submit" value="Upload" /></p>'
+    + '</form>');
+});
 
-var users = {
-  list: function (req, res) {
-    res.send('user list');
-  },
+app.post('/', function(req, res, next){
+  // create a form to begin parsing
+  var form = new multiparty.Form();
+  var image;
+  var title;
 
-  get: function (req, res) {
-    res.send('user ' + req.params.uid);
-  },
+  form.on('error', next);
+  form.on('close', function(){
+    res.send(format('\nuploaded %s (%d Kb) as %s'
+      , image.filename
+      , image.size / 1024 | 0
+      , title));
+  });
 
-  delete: function (req, res) {
-    res.send('delete users');
-  }
-};
+  // listen on field event for title
+  form.on('field', function(name, val){
+    if (name !== 'title') return;
+    title = val;
+  });
 
-var pets = {
-  list: function (req, res) {
-    res.send('user ' + req.params.uid + '\'s pets');
-  },
+  // listen on part event for image file
+  form.on('part', function(part){
+    if (!part.filename) return;
+    if (part.name !== 'image') return part.resume();
+    image = {};
+    image.filename = part.filename;
+    image.size = 0;
+    part.on('data', function(buf){
+      image.size += buf.length;
+    });
+  });
 
-  delete: function (req, res) {
-    res.send('delete ' + req.params.uid + '\'s pet ' + req.params.pid);
-  }
-};
 
-app.map({
-  '/users': {
-    get: users.list,
-    delete: users.delete,
-    '/:uid': {
-      get: users.get,
-      '/pets': {
-        get: pets.list,
-        '/:pid': {
-          delete: pets.delete
-        }
-      }
-    }
-  }
+  // parse the form
+  form.parse(req);
 });
 
 /* istanbul ignore next */
 if (!module.parent) {
-  app.listen(3000);
-  console.log('Express started on port 3000');
+  app.listen(4000);
+  console.log('Express started on port 4000');
 }
