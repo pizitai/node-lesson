@@ -10,3 +10,4 @@ online|在线状态|2017-12-24
 params|获取请求参数|2017-12-24
 resource|根据不同的请求方式进行处理，如get,delete|2017-12-24
 route-map|路由映射|2017-12-24
+route-middleware|路由中间件|2017-12-24
