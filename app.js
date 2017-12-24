@@ -2,84 +2,103 @@ var express = require('express');
 
 var app = module.exports = express();
 
-// Ad-hoc example resource method
+// create an error with .status. we
+// can then use the property in our
+// custom error handler (Connect repects this prop as well)
 
-app.resource = function(path, obj) {
-  this.get(path, obj.index);
-  this.get(path + '/:a..:b.:format?', function(req, res){
-    var a = parseInt(req.params.a, 10);
-    var b = parseInt(req.params.b, 10);
-    var format = req.params.format;
-    obj.range(req, res, a, b, format);
-  });
-  this.get(path + '/:id', obj.show);
-  this.delete(path + '/:id', function(req, res){
-    var id = parseInt(req.params.id, 10);
-    obj.destroy(req, res, id);
-  });
-};
+function error(status, msg) {
+  var err = new Error(msg);
+  err.status = status;
+  return err;
+}
 
-// Fake records
+// if we wanted to supply more than JSON, we could
+// use something similar to the content-negotiation
+// example.
 
-var users = [
-    { name: 'tj' }
-  , { name: 'ciaran' }
-  , { name: 'aaron' }
-  , { name: 'guillermo' }
-  , { name: 'simon' }
-  , { name: 'tobi' }
+// here we validate the API key,
+// by mounting this middleware to /api
+// meaning only paths prefixed with "/api"
+// will cause this middleware to be invoked
+
+app.use('/api', function(req, res, next){
+  var key = req.query['api-key'];
+
+  // key isn't present
+  if (!key) return next(error(400, 'api key required'));
+
+  // key is invalid
+  if (!~apiKeys.indexOf(key)) return next(error(401, 'invalid api key'));
+
+  // all good, store req.key for route access
+  req.key = key;
+  next();
+});
+
+// map of valid api keys, typically mapped to
+// account info with some sort of database like redis.
+// api keys do _not_ serve as authentication, merely to
+// track API usage or help prevent malicious behavior etc.
+
+var apiKeys = ['foo', 'bar', 'baz'];
+
+// these two objects will serve as our faux database
+
+var repos = [
+    { name: 'express', url: 'http://github.com/expressjs/express' }
+  , { name: 'stylus', url: 'http://github.com/learnboost/stylus' }
+  , { name: 'cluster', url: 'http://github.com/learnboost/cluster' }
 ];
 
-// Fake controller.
+var users = [
+    { name: 'tobi' }
+  , { name: 'loki' }
+  , { name: 'jane' }
+];
 
-var User = {
-  index: function(req, res){
-    res.send(users);
-  },
-  show: function(req, res){
-    res.send(users[req.params.id] || { error: 'Cannot find user' });
-  },
-  destroy: function(req, res, id){
-    var destroyed = id in users;
-    delete users[id];
-    res.send(destroyed ? 'destroyed' : 'Cannot find user');
-  },
-  range: function(req, res, a, b, format){
-    var range = users.slice(a, b + 1);
-    switch (format) {
-      case 'json':
-        res.send(range);
-        break;
-      case 'html':
-      default:
-        var html = '<ul>' + range.map(function(user){
-          return '<li>' + user.name + '</li>';
-        }).join('\n') + '</ul>';
-        res.send(html);
-        break;
-    }
-  }
+var userRepos = {
+  tobi: [repos[0], repos[1]]
+  , loki: [repos[1]]
+  , jane: [repos[2]]
 };
 
-// curl http://localhost:3000/users     -- responds with all users
-// curl http://localhost:3000/users/1   -- responds with user 1
-// curl http://localhost:3000/users/4   -- responds with error
-// curl http://localhost:3000/users/1..3 -- responds with several users
-// curl -X DELETE http://localhost:3000/users/1  -- deletes the user
+// we now can assume the api key is valid,
+// and simply expose the data
 
-app.resource('/users', User);
+app.get('/api/users', function(req, res, next){
+  res.send(users);
+});
 
-app.get('/', function(req, res){
-  res.send([
-    '<h1>Examples:</h1> <ul>'
-    , '<li>GET /users</li>'
-    , '<li>GET /users/1</li>'
-    , '<li>GET /users/3</li>'
-    , '<li>GET /users/1..3</li>'
-    , '<li>GET /users/1..3.json</li>'
-    , '<li>DELETE /users/4</li>'
-    , '</ul>'
-  ].join('\n'));
+app.get('/api/repos', function(req, res, next){
+  res.send(repos);
+});
+
+app.get('/api/user/:name/repos', function(req, res, next){
+  var name = req.params.name;
+  var user = userRepos[name];
+
+  if (user) res.send(user);
+  else next();
+});
+
+// middleware with an arity of 4 are considered
+// error handling middleware. When you next(err)
+// it will be passed through the defined middleware
+// in order, but ONLY those with an arity of 4, ignoring
+// regular middleware.
+app.use(function(err, req, res, next){
+  // whatever you want here, feel free to populate
+  // properties on `err` to treat it differently in here.
+  res.status(err.status || 500);
+  res.send({ error: err.message });
+});
+
+// our custom JSON 404 middleware. Since it's placed last
+// it will be the last middleware called, if all others
+// invoke next() and do not respond.
+app.use(function(req, res){
+  res.status(404);
+  res.send({ error: "Lame, can't find that" });
 });
 
 /* istanbul ignore next */
