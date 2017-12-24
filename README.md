@@ -3,4 +3,4 @@ node学习记录
 
 branch|desc|time
 ---|---|---
-downloads|下载|2017-12-24
+static-files|静态文件|2017-12-24

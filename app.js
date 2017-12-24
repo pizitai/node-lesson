@@ -1,32 +1,38 @@
 var express = require('express');
 
+var logger = require('morgan');
 var path = require('path');
-var app = module.exports = express();
+var app = express();
 
-app.get('/', function(req, res){
-  res.send('<ul>'
-    + '<li>Download <a href="/files/amazing.txt">amazing.txt</a>.</li>'
-    + '<li>Download <a href="/files/missing.txt">missing.txt</a>.</li>'
-    + '<li>Download <a href="/files/CCTV大赛上海分赛区.txt">CCTV大赛上海分赛区.txt</a>.</li>'
-    + '</ul>');
-});
+// log requests
+app.use(logger('dev'));
 
-// /files/* is accessed via req.params[0]
-// but here we name it :file
-app.get('/files/:file(*)', function(req, res, next){
-  var filePath = path.join(__dirname, 'files', req.params.file);
+// express on its own has no notion
+// of a "file". The express.static()
+// middleware checks for a file matching
+// the `req.path` within the directory
+// that you pass it. In this case "GET /js/app.js"
+// will look for "./public/js/app.js".
 
-  res.download(filePath, function (err) {
-    if (!err) return; // file sent
-    if (err && err.status !== 404) return next(err); // non-404 error
-    // file for download not found
-    res.statusCode = 404;
-    res.send('Cant find that file, sorry!');
-  });
-});
+app.use(express.static(path.join(__dirname, 'public')));
 
-/* istanbul ignore next */
-if (!module.parent) {
-  app.listen(3000);
-  console.log('Express started on port 3000');
-}
+// if you wanted to "prefix" you may use
+// the mounting feature of Connect, for example
+// "GET /static/js/app.js" instead of "GET /js/app.js".
+// The mount-path "/static" is simply removed before
+// passing control to the express.static() middleware,
+// thus it serves the file correctly by ignoring "/static"
+app.use('/static', express.static(path.join(__dirname, 'public')));
+
+// if for some reason you want to serve files from
+// several directories, you can use express.static()
+// multiple times! Here we're passing "./public/css",
+// this will allow "GET /style.css" instead of "GET /css/style.css":
+app.use(express.static(path.join(__dirname, 'public', 'css')));
+
+app.listen(3000);
+console.log('listening on port 3000');
+console.log('try:');
+console.log('  GET /hello.txt');
+console.log('  GET /js/app.js');
+console.log('  GET /css/style.css');
