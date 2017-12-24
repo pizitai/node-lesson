@@ -6,6 +6,7 @@ branch|desc | time
 ---|---|---
 hello_world|练手demo|2017-12-22
 error|错误处理|2017-12-24
+error-pages|错误页面|2017-12-24
 online|在线状态|2017-12-24
 params|获取请求参数|2017-12-24
 resource|根据不同的请求方式进行处理，如get,delete|2017-12-24
