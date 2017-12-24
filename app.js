@@ -1,64 +1,48 @@
 var express = require('express');
 
-var verbose = process.env.NODE_ENV != 'test';
+var path = require('path');
 
 var app = module.exports = express();
 
-app.map = function (a, route) {
-  route = route || '';
-  for (var key in a) {
-    switch (typeof a[key]) {
-      // { '/path': { ... }}
-      case 'object':
-        app.map(a[key], route + key);
-        break;
-        // get: function(){ ... }
-      case 'function':
-        if (verbose) console.log('%s %s', key, route);
-        app[key](route, a[key]);
-        break;
-    }
-  }
-};
+// Register ejs as .html. If we did
+// not call this, we would need to
+// name our views foo.ejs instead
+// of foo.html. The __express method
+// is simply a function that engines
+// use to hook into the Express view
+// system by default, so if we want
+// to change "foo.ejs" to "foo.html"
+// we simply pass _any_ function, in this
+// case `ejs.__express`.
 
-var users = {
-  list: function (req, res) {
-    res.send('user list');
-  },
+app.engine('.html', require('ejs').__express);
 
-  get: function (req, res) {
-    res.send('user ' + req.params.uid);
-  },
+// Optional since express defaults to CWD/views
 
-  delete: function (req, res) {
-    res.send('delete users');
-  }
-};
+app.set('views', path.join(__dirname, 'views'));
 
-var pets = {
-  list: function (req, res) {
-    res.send('user ' + req.params.uid + '\'s pets');
-  },
+// Path to our public directory
 
-  delete: function (req, res) {
-    res.send('delete ' + req.params.uid + '\'s pet ' + req.params.pid);
-  }
-};
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.map({
-  '/users': {
-    get: users.list,
-    delete: users.delete,
-    '/:uid': {
-      get: users.get,
-      '/pets': {
-        get: pets.list,
-        '/:pid': {
-          delete: pets.delete
-        }
-      }
-    }
-  }
+// Without this you would need to
+// supply the extension to res.render()
+// ex: res.render('users.html').
+app.set('view engine', 'html');
+
+// Dummy users
+var users = [
+  { name: 'tobi', email: 'tobi@learnboost.com' },
+  { name: 'loki', email: 'loki@learnboost.com' },
+  { name: 'jane', email: 'jane@learnboost.com' }
+];
+
+app.get('/', function(req, res){
+  res.render('users', {
+    users: users,
+    title: "EJS example",
+    header: "Some users"
+  });
 });
 
 /* istanbul ignore next */
