@@ -1,85 +1,64 @@
 var express = require('express');
 
+var verbose = process.env.NODE_ENV != 'test';
+
 var app = module.exports = express();
 
-// Ad-hoc example resource method
-
-app.resource = function(path, obj) {
-  this.get(path, obj.index);
-  this.get(path + '/:a..:b.:format?', function(req, res){
-    var a = parseInt(req.params.a, 10);
-    var b = parseInt(req.params.b, 10);
-    var format = req.params.format;
-    obj.range(req, res, a, b, format);
-  });
-  this.get(path + '/:id', obj.show);
-  this.delete(path + '/:id', function(req, res){
-    var id = parseInt(req.params.id, 10);
-    obj.destroy(req, res, id);
-  });
-};
-
-// Fake records
-
-var users = [
-    { name: 'tj' }
-  , { name: 'ciaran' }
-  , { name: 'aaron' }
-  , { name: 'guillermo' }
-  , { name: 'simon' }
-  , { name: 'tobi' }
-];
-
-// Fake controller.
-
-var User = {
-  index: function(req, res){
-    res.send(users);
-  },
-  show: function(req, res){
-    res.send(users[req.params.id] || { error: 'Cannot find user' });
-  },
-  destroy: function(req, res, id){
-    var destroyed = id in users;
-    delete users[id];
-    res.send(destroyed ? 'destroyed' : 'Cannot find user');
-  },
-  range: function(req, res, a, b, format){
-    var range = users.slice(a, b + 1);
-    switch (format) {
-      case 'json':
-        res.send(range);
+app.map = function (a, route) {
+  route = route || '';
+  for (var key in a) {
+    switch (typeof a[key]) {
+      // { '/path': { ... }}
+      case 'object':
+        app.map(a[key], route + key);
         break;
-      case 'html':
-      default:
-        var html = '<ul>' + range.map(function(user){
-          return '<li>' + user.name + '</li>';
-        }).join('\n') + '</ul>';
-        res.send(html);
+        // get: function(){ ... }
+      case 'function':
+        if (verbose) console.log('%s %s', key, route);
+        app[key](route, a[key]);
         break;
     }
   }
 };
 
-// curl http://localhost:3000/users     -- responds with all users
-// curl http://localhost:3000/users/1   -- responds with user 1
-// curl http://localhost:3000/users/4   -- responds with error
-// curl http://localhost:3000/users/1..3 -- responds with several users
-// curl -X DELETE http://localhost:3000/users/1  -- deletes the user
+var users = {
+  list: function (req, res) {
+    res.send('user list');
+  },
 
-app.resource('/users', User);
+  get: function (req, res) {
+    res.send('user ' + req.params.uid);
+  },
 
-app.get('/', function(req, res){
-  res.send([
-    '<h1>Examples:</h1> <ul>'
-    , '<li>GET /users</li>'
-    , '<li>GET /users/1</li>'
-    , '<li>GET /users/3</li>'
-    , '<li>GET /users/1..3</li>'
-    , '<li>GET /users/1..3.json</li>'
-    , '<li>DELETE /users/4</li>'
-    , '</ul>'
-  ].join('\n'));
+  delete: function (req, res) {
+    res.send('delete users');
+  }
+};
+
+var pets = {
+  list: function (req, res) {
+    res.send('user ' + req.params.uid + '\'s pets');
+  },
+
+  delete: function (req, res) {
+    res.send('delete ' + req.params.uid + '\'s pet ' + req.params.pid);
+  }
+};
+
+app.map({
+  '/users': {
+    get: users.list,
+    delete: users.delete,
+    '/:uid': {
+      get: users.get,
+      '/pets': {
+        get: pets.list,
+        '/:pid': {
+          delete: pets.delete
+        }
+      }
+    }
+  }
 });
 
 /* istanbul ignore next */
