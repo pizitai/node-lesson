@@ -15,9 +15,9 @@ branch|desc | time
 [route-separation](https://github.com/pizitai/node-lesson/tree/route-separation)|路由分离|2017-12-24
 [ejs](https://github.com/pizitai/node-lesson/tree/ejs)|模版引擎|2017-12-24
 [search](https://github.com/pizitai/node-lesson/tree/search)|查询|2017-12-24
-[cookies](https://github.com/pizitai/node-lesson/tree/cookies)|查询|2017-12-24
-[session](https://github.com/pizitai/node-lesson/tree/session)|查询|2017-12-24
-[cookie-sessions](https://github.com/pizitai/node-lesson/tree/cookie-sessions)|查询|2017-12-24
+[cookies](https://github.com/pizitai/node-lesson/tree/cookies)|cookies|2017-12-24
+[session](https://github.com/pizitai/node-lesson/tree/session)|session|2017-12-24
+[cookie-sessions](https://github.com/pizitai/node-lesson/tree/cookie-sessions)|cookie-sessions|2017-12-24
 [downloads](https://github.com/pizitai/node-lesson/tree/downloads)|下载|2017-12-24
 [static-files](https://github.com/pizitai/node-lesson/tree/static-files)|静态文件|2017-12-24
 [markdown](https://github.com/pizitai/node-lesson/tree/markdown)|显示markdown文件|2017-12-24
