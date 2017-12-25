@@ -30,3 +30,4 @@ branch|desc | time
 [view-constructor](https://github.com/pizitai/node-lesson/tree/view-constructor)|视图构造器|2017-12-24
 [view-locals](https://github.com/pizitai/node-lesson/tree/view-locals)|本地视图|2017-12-24
 [web-service](https://github.com/pizitai/node-lesson/tree/web-service)|web服务|2017-12-24
+[log-to-file](https://github.com/pizitai/node-lesson/tree/log-to-file)|日志打印到文件|2017-12-25
