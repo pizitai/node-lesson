@@ -18,7 +18,7 @@ var path = require('path')
 // create a write stream (in append mode)
 var accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), {flags: 'a'})
 
-app.use(logger('dev', {stream: accessLogStream}));
+app.use(logger('combined', {stream: accessLogStream}));
 
 // Populates req.session
 app.use(session({

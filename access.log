@@ -1,1 +1,2 @@
 [0mGET / [32m200 [0m8.167 ms - 40[0m
+::1 - - [25/Dec/2017:06:21:01 +0000] "GET / HTTP/1.1" 200 40 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"
