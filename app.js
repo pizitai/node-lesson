@@ -16,6 +16,7 @@ app.get('/', function(req, res){
   if (req.session.views) {
     ++req.session.views;
   } else {
+    console.log(req.sessionID);
     req.session.views = 1;
     body += '<p>First time visiting? view this page in several browsers :)</p>';
   }
